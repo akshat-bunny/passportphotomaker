@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Photos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/cropperjs/dist/cropper.css" rel="stylesheet">
+    <style>
+        /* General body styling */
+        body {
+            background-color: #f4f7f9;
+        }
+
+        /* Heading styling */
+        h1 {
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* Card styling */
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-img-top {
+            object-fit: contain;
+            height: 300px;
+            border-radius: 10px 10px 0 0;
+        }
+
+        /* Button styling */
+        .btn {
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 0.875rem;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-dark {
+            background-color: #343a40;
+            border: none;
+        }
+
+        .btn-dark:hover {
+            background-color: #23272b;
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            border: none;
+        }
+
+        .btn-info:hover {
+            background-color: #138496;
+        }
+
+        /* Button spacing */
+        .card-body button {
+            margin: 5px; /* Add some margin around each button */
+        }
+
+        /* Crop Modal Styling */
+        #cropModal .modal-dialog {
+            max-width: 80%;
+        }
+
+        #cropModal .modal-body {
+            height: 80vh;
+        }
+
+        #cropModal .cropper-container {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Change Background Modal Styling */
+        #changeBgModal .modal-dialog {
+            max-width: 60%;
+        }
+
+        #changeBgModal .modal-body {
+            padding: 20px;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+
+        #changeBgModal .modal-body img {
+            max-height: 300px;
+            width: auto;
+            margin-bottom: 15px;
+        }
+
+        #changeBgModal .form-group {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        #changeBgModal .modal-footer {
+            border-top: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+
+        /* Edit Photo Modal Styling */
+        #editPhotoModal .modal-dialog {
+            max-width: 60%;
+        }
+
+        #editPhotoModal .modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #editPhotoModal .modal-body img {
+            max-height: 80vh;
+            width: auto;
+            margin-bottom: 20px;
+        }
+
+        #editPhotoModal .form-group {
+            margin-bottom: 15px;
+        }
+
+        #editPhotoModal .modal-footer {
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* Next Button Styling */
+        .btn-next {
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 0.875rem;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            transition: background-color 0.3s;
+        }
+
+        .btn-next:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mt-1">
+        <h1 class="text-center mb-4">Edit Photos</h1>
+        <div class="row">
+            {% for filename in filenames %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('uploaded_file', filename=filename) }}" id="image-to-adjust-{{ filename }}" class="card-img-top"
+                        alt="Uploaded Photo">
+                    <div class="card-body text-center">
+                        <button data-filename="{{ filename }}" class="btn btn-danger remove-bg-btn">Remove Background</button>
+                        <button data-filename="{{ filename }}" class="btn btn-secondary crop-btn">Crop</button>
+                        <button data-filename="{{ filename }}" class="btn btn-primary change-bg-btn">Change Background</button>
+                        <button data-filename="{{ filename }}" class="btn btn-dark add-border-btn">Add Border</button>
+                        <button data-filename="{{ filename }}" class="btn btn-info edit-photo-btn">Edit Photo</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Next Button -->
+        <div class="text-center mt-4">
+            <button id="next-btn" class="btn btn-next">Next</button>
+        </div>
+    </div>
+
+    <!-- Modal for Cropping -->
+    <div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cropModalLabel">Crop Photo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="cropper-container">
+                        <img id="image-to-crop" src="" alt="Image to crop" class="img-fluid">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="crop-confirm-btn">Crop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Changing Background -->
+    <div class="modal fade" id="changeBgModal" tabindex="-1" aria-labelledby="changeBgModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeBgModalLabel">Change Background Color</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body d-flex flex-column align-items-center">
+                    <img id="bg-image-to-change" src="" alt="Image with background" class="img-fluid mb-3">
+                    <div class="form-group">
+                        <label for="color-picker" class="form-label">Select Background Color:</label>
+                        <input type="color" id="color-picker" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="change-bg-confirm-btn">Change Background</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Editing Photo -->
+    <div class="modal fade" id="editPhotoModal" tabindex="-1" aria-labelledby="editPhotoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPhotoModalLabel">Edit Photo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Image Column -->
+                        <div class="col-md-6 d-flex justify-content-center align-items-center">
+                            <img id="photo-to-edit" src="" alt="Photo to edit" class="img-fluid" style="max-width: 100%; max-height: 80vh;">
+                        </div>
+                        <!-- Edit Options Column -->
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="brightness-range" class="form-label">Brightness:</label>
+                                <input type="range" id="brightness-range" class="form-range" min="-100" max="100" value="0">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="contrast-range" class="form-label">Contrast:</label>
+                                <input type="range" id="contrast-range" class="form-range" min="-100" max="100" value="0">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="hue-range" class="form-label">Hue:</label>
+                                <input type="range" id="hue-range" class="form-range" min="-180" max="180" value="0">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="saturation-range" class="form-label">Saturation:</label>
+                                <input type="range" id="saturation-range" class="form-range" min="-100" max="100" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="edit-confirm-btn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/cropperjs"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/camanjs/4.1.2/caman.full.min.js"></script>
+    <script src="../static/scripts.js"></script>
+</body>
+
+</html>

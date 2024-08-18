@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Photos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        /* General body styling */
+        body {
+            background-color: #f8f9fa; /* Light background color */
+            font-family: 'Arial', sans-serif; /* Clean and modern font */
+           
+        }
+
+        /* Heading styling */
+        h1 {
+            font-size: 2rem; /* Slightly larger heading */
+            color: #343a40; /* Darker color for the heading */
+            font-weight: 600; /* Bold font */
+        }
+
+        /* Card styling */
+        .card {
+            border: none; /* Remove border */
+            border-radius: 12px; /* Rounded corners */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow */
+            transition: transform 0.3s, box-shadow 0.3s; /* Smooth transition for hover effects */
+        }
+
+        .card:hover {
+            transform: scale(1.05); /* Slightly enlarge on hover */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+        }
+
+        .card-img-top {
+            object-fit: contain; /* Cover the image */
+            height: 140px; /* Fixed height for images */
+            border-radius: 12px 12px 0 0; /* Rounded top corners */
+        }
+
+        /* Form styling */
+        .form-label {
+            font-weight: 500; /* Medium weight for labels */
+        }
+
+        .form-select {
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Light shadow */
+            transition: border-color 0.3s; /* Smooth transition for border color */
+        }
+
+        .form-select:focus {
+            border-color: #007bff; /* Change border color on focus */
+            box-shadow: 0 0 0 0.2rem rgba(38, 143, 255, 0.25); /* Shadow on focus */
+        }
+
+        /* Button styling */
+        .btn-primary {
+            border-radius: 8px; /* Rounded corners */
+            padding: 10px 20px; /* Adjust padding */
+            font-size: 1rem; /* Adjust font size */
+            background-color: #007bff; /* Primary color */
+            border: none; /* Remove border */
+            transition: background-color 0.3s; /* Smooth transition for hover effects */
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3; /* Darker shade on hover */
+        }
+
+        /* Responsive styling */
+        @media (max-width: 576px) {
+            .card-img-top {
+                height: auto; /* Adjust image height on small screens */
+            }
+
+            .form-select {
+                font-size: 0.875rem; /* Smaller font size on small screens */
+            }
+
+            .btn-primary {
+                font-size: 0.875rem; /* Smaller font size for buttons */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Print Photos</h1>
+        <div class="row">
+            {% for filename in filenames %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="{{ url_for('uploaded_file', filename=filename) }}" class="card-img-top" alt="Photo for Print">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <label for="photo-count-{{ loop.index }}" class="form-label">Select Count</label>
+                            <select id="photo-count-{{ loop.index }}" class="form-select">
+                                <option value="0">Select count</option>
+                                <option value="3">3</option>
+                                <option value="6">6</option>
+                                <option value="9">9</option>
+                                <option value="12">12</option>
+                                <option value="18">18</option>
+                                <option value="24">24</option>
+                                <option value="30">30</option>
+                                <option value="36">36</option>
+                                <option value="42">42</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <label for="paper-size" class="form-label">Select Paper Size</label>
+            <select id="paper-size" class="form-select mb-4" style="max-width: 200px; margin: 0 auto;">
+                <option value="4x6">4x6 inches</option>
+                <option value="A4">A4 (8.27x11.69 inches)</option>
+            </select>
+            <button id="next-button" class="btn btn-primary">Next</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const filenamesParam = urlParams.get('filenames');
+            if (filenamesParam) {
+                const filenames = decodeURIComponent(filenamesParam).split(',');
+                const photoCountElements = document.querySelectorAll('[id^="photo-count-"]');
+                photoCountElements.forEach((select, index) => {
+                    const photoFilename = filenames[index] || '';
+                    select.setAttribute('data-filename', photoFilename);
+                });
+            }
+        });
+
+        document.getElementById('next-button').addEventListener('click', function () {
+            const counts = Array.from(document.querySelectorAll('[id^="photo-count-"]')).map(select => parseInt(select.value, 10));
+            const filenames = Array.from(document.querySelectorAll('[id^="photo-count-"]')).map(select => select.getAttribute('data-filename'));
+            const paperSize = document.getElementById('paper-size').value;
+
+            if (counts.some(isNaN) || counts.every(count => count === 0)) {
+                alert('Please select a count for all photos.');
+                return;
+            }
+
+            fetch('/generate_print_sheet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ counts: counts, filenames: filenames, paperSize: paperSize })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'print_sheet.png';
+                link.click();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+
+</html>
